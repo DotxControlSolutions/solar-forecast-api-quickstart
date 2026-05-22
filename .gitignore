@@ -1,0 +1,24 @@
+# Secrets - NEVER commit
+.env
+*.key
+
+# Local virtualenv
+.venv/
+venv/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local plot artifacts
+*.html
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
