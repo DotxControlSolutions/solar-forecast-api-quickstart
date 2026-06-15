@@ -135,7 +135,11 @@ You'll see five steps print to your terminal:
    Calibration is asynchronous and returns a task handle immediately.
 4. **Poll until calibration completes.** Once `is_calibrated` flips to
    `true`, R² and RMSE are printed.
-5. **Submit recent measurements and get a forecast.** Forecast horizon,
+5. **Submit recent measurements and get a forecast.** The `/forecast/`
+   endpoint takes the **same** cumulative-Wh format as `/fit/` (`time` +
+   `solar`, the lifetime-yield counter in Wh) — one unit across the whole
+   API. Send a short rolling window of your most recent readings (at least
+   two); the server differentiates them internally. Forecast horizon,
    `performance_ratio`, and the first 8 timesteps are printed.
 
 All calls authenticate with the same `X-API-Key` header carrying your tenant

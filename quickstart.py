@@ -29,7 +29,7 @@ import csv
 import os
 import sys
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import requests
 from dotenv import load_dotenv
@@ -229,18 +229,12 @@ for sa in fitted_params["sub_arrays"]:
 
 print("\nStep 6 - submit recent measurements + retrieve the forecast")
 
-# /forecast/ still expects instantaneous power_kw, so derive two readings by
-# diffing the last three cumulative samples. Conversion mirrors the server's
-# internal one: (Wh delta over a 15-min interval) / 250 = average kW.
-s0, s1, s2 = measurements[-3]["solar"], measurements[-2]["solar"], measurements[-1]["solar"]
-recent_pk1 = (s1 - s0) / 250
-recent_pk2 = (s2 - s1) / 250
-
-recent_now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
-recent_measurements = [
-    {"time": (recent_now - timedelta(minutes=30)).isoformat().replace("+00:00", "Z"), "power_kw": recent_pk1},
-    {"time": (recent_now - timedelta(minutes=15)).isoformat().replace("+00:00", "Z"), "power_kw": recent_pk2},
-]
+# /forecast/ takes the SAME cumulative-Wh readings as /fit/ (`time` + `solar`,
+# the lifetime-yield counter in Wh) - there is one unit across the whole API.
+# Send a short rolling window of your most recent counter readings (at least
+# two); the server differentiates them to power internally. Here we just reuse
+# the tail of the calibration series as a stand-in for "live" readings.
+recent_measurements = measurements[-3:]
 
 response = requests.post(
     f"{API_BASE}/plants/{plant_id}/assets/{asset_id}/forecast/",
@@ -249,6 +243,10 @@ response = requests.post(
 response.raise_for_status()
 forecast = response.json()
 
+ingest = forecast.get("ingest", {})
+print(f"  -> Readings ingested  : {ingest.get('rows_received', len(recent_measurements))} "
+      f"(dropped_negative={ingest.get('rows_dropped_negative', 0)}, "
+      f"clipped={ingest.get('rows_clipped_above_capacity', 0)})")
 print(f"  -> Performance ratio  : {forecast['performance_ratio']:.3f}")
 print(f"  -> Horizon            : {forecast['horizon_hours']} hours, "
       f"{len(forecast['forecast_data'])} samples")
