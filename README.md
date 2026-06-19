@@ -139,8 +139,11 @@ You'll see five steps print to your terminal:
    endpoint takes the **same** cumulative-Wh format as `/fit/` (`time` +
    `solar`, the lifetime-yield counter in Wh) — one unit across the whole
    API. Send a short rolling window of your most recent readings (at least
-   two); the server differentiates them internally. Forecast horizon,
-   `performance_ratio`, and the first 8 timesteps are printed.
+   two); the server differentiates them internally. The forecast is a
+   **rolling 48-hour window** (192 quarter-hour samples) starting at the
+   current 15-minute interval, so a full local *tomorrow* is always available
+   in any EU timezone. Forecast horizon, `performance_ratio`, and the first 8
+   timesteps are printed.
 
 All calls authenticate with the same `X-API-Key` header carrying your tenant
 key. There is no separate key handshake or login flow.
