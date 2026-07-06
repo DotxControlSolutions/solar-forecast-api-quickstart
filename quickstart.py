@@ -56,6 +56,8 @@ SUB_ARRAYS       = [
     # Each parameter can be:  None -> autofit determines it, or a value -> pinned.
     # Use multiple sub-arrays if your plant has multiple roof faces with
     # different orientations.
+    # Azimuth is a compass bearing: 0=north, 90=east, 180=south, 270=west
+    # (NOT 0=south; values are never converted). Tilt is degrees from horizontal.
     {"name": "main", "kwp": None, "tilt": None, "azimuth": None},
 ]
 

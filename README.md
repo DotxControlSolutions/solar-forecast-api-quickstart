@@ -148,6 +148,14 @@ SUB_ARRAYS       = [
 - `SUB_ARRAYS` - set `kwp` / `tilt` / `azimuth` to `null` to let the autofit
   determine them, or to a pinned value if you already know them. Use one
   sub-array per roof face if your plant has multiple orientations.
+- **Azimuth convention**: a compass bearing in degrees - **0° = north,
+  90° = east, 180° = south, 270° = west**. A south-west roof face is
+  ~220°, not -40° or +40°. Values are **not** converted from other
+  conventions (e.g. 0° = south): the fit supports 45°-315° and silently
+  clamps anything outside that range, so a wrong-convention value like
+  -90 becomes 45° (northeast) and degrades the fit. Tilt is degrees from
+  horizontal (0° = flat, 90° = vertical facade). When unsure, prefer
+  `null` over a guess in the wrong convention.
 - `INVERTER_AC_KW` is the AC capacity of your inverter; forecasts are
   clipped at this value.
 - `TEMP_COEFF` is the panel power temperature coefficient in 1/°C - the
