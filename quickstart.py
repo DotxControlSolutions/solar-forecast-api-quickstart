@@ -233,6 +233,9 @@ r2   = fitted_params["r2"]
 rmse = fitted_params["rmse"]
 print(f"  -> Goodness of fit:    R² = {r2:.3f}, RMSE = {rmse:.2f} kW")
 print(f"  -> Fitted DC capacity: {fitted_params['fitted_kwp']:.2f} kWp")
+if "temperature_coefficient" in fitted_params:
+    print(f"  -> Fitted temperature response: {100 * fitted_params['temperature_coefficient']:.2f} %/degC "
+          f"(freely fitted; absorbs cell-temperature and other power-dependent losses)")
 for sa in fitted_params["sub_arrays"]:
     print(f"     {sa['name']}: "
           f"kwp = {sa['kwp']:.2f} kWp, "
