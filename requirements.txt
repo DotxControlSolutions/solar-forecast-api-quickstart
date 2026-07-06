@@ -1,4 +1,4 @@
 requests>=2.31
 python-dotenv>=1.0
-matplotlib>=3.7
+plotly>=5.18
 jupyter>=1.0

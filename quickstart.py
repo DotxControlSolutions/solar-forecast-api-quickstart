@@ -78,13 +78,20 @@ headers = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
 
 
 def load_measurements(path):
-    """Read a CSV with columns 'timestamp,solar' into the API's JSON shape.
+    """Read a CSV with columns 'timestamp,solar[,reduction]' into the API's JSON shape.
 
     `solar` is the inverter's cumulative energy counter in Wh (a monotonic
     lifetime-yield reading), not instantaneous power - the server
     differentiates consecutive samples to recover power. Timestamps may
     include or omit a timezone suffix; naive timestamps are treated as
     UTC. Replace this with your own loader if your CSV differs.
+
+    `reduction` is optional: the curtailment level active during the
+    reading's interval, as a percentage of nominal AC power available
+    (100 = no curtailment, 50 = inverter capped at half its rating). Include
+    it if your plant curtails (e.g. to stay under a feed-in limit) - the
+    calibration then accounts for capped intervals instead of mistaking them
+    for underperforming panels. Omit the column if you never curtail.
     """
     out = []
     with open(path, newline="") as f:
@@ -92,10 +99,13 @@ def load_measurements(path):
             ts = datetime.fromisoformat(row["timestamp"].replace(" ", "T").replace("Z", "+00:00"))
             if ts.tzinfo is None:
                 ts = ts.replace(tzinfo=timezone.utc)
-            out.append({
+            m = {
                 "time":  ts.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "solar": int(row["solar"]),
-            })
+            }
+            if row.get("reduction") not in (None, ""):
+                m["reduction"] = float(row["reduction"])
+            out.append(m)
     return out
 
 
@@ -185,6 +195,9 @@ fit_response.raise_for_status()
 task    = fit_response.json()
 task_id = task['task_id']
 print(f"  -> Fit task dispatched: task_id={task_id} status={task['status']}.")
+if task.get("rows_reduced"):
+    print(f"  -> {task['rows_reduced']} curtailed interval(s) detected (reduction < 100); "
+          f"the calibration caps the model accordingly.")
 
 
 # --- Step 5: poll GET /fit/?task_id=... until the task completes -----------

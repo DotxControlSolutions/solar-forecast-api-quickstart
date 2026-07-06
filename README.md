@@ -72,6 +72,9 @@ timestamp,solar
 ...
 ```
 
+(An optional third column `reduction` covers curtailed plants - see
+*Optional: curtailment* below.)
+
 - `timestamp` - ISO 8601 datetime. Timezone-naive timestamps are treated as
   UTC; if your data is in local time, add a UTC offset (`...+02:00`) or
   trailing `Z` so the conversion is unambiguous.
@@ -81,6 +84,39 @@ timestamp,solar
   increasing counter. The API differentiates consecutive samples to recover
   instantaneous power, so we need one extra reading to produce N power
   values from N+1 cumulative samples (hence ≥97 rows for a full day).
+
+### Optional: curtailment (`reduction` column)
+
+If your plant curtails its inverter - for example to stay under a feed-in
+limit - add a third column `reduction`: the curtailment level active during
+the reading's interval, as a **percentage of nominal AC power available**
+(100 = no curtailment, 50 = inverter capped at half its rating):
+
+```
+timestamp,solar,reduction
+2025-05-01 12:00:00,89797620,100
+2025-05-01 12:15:00,89840350,71.73
+2025-05-01 12:30:00,89884245,71.73
+...
+```
+
+Why it matters: during a curtailed interval the meter records less energy
+than the panels could have produced. Without the `reduction` column the
+calibration has no way to tell curtailment from weak panels or a wrong
+orientation, and the fitted model ends up biased low. With it, the
+calibration caps the modeled output per interval exactly like your inverter
+did, so every sample stays usable.
+
+Notes:
+
+- The scale is percent (0-100). If your system reports basis points
+  (0-10000, e.g. `7173` for 71.73%), divide by 100 before sending - the API
+  rejects values above 100 with a hint.
+- Omit the column (or the JSON field) entirely if you never curtail; it
+  defaults to 100.
+- **Forecasts are not affected.** The forecast always predicts the
+  uncurtailed output at nominal AC power - `reduction` only improves the
+  calibration.
 
 ## Plant and asset configuration
 
@@ -132,7 +168,9 @@ You'll see five steps print to your terminal:
 1. **Register a plant.**
 2. **Register a solar asset** under the plant.
 3. **Calibrate the asset model** by uploading your cumulative-energy CSV.
-   Calibration is asynchronous and returns a task handle immediately.
+   Calibration is asynchronous and returns a task handle immediately. If the
+   CSV carries a `reduction` column, the response reports how many curtailed
+   intervals were detected (`rows_reduced`).
 4. **Poll until calibration completes.** Once `is_calibrated` flips to
    `true`, R² and RMSE are printed.
 5. **Submit recent measurements and get a forecast.** The `/forecast/`
