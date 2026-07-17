@@ -40,7 +40,7 @@ from dotenv import load_dotenv
 # before running. Lat/lon especially matter - the autofit uses them to
 # compute sun position.
 
-CSV_PATH      = r"C:\path\to\measurements.csv"   # CSV: timestamp,solar (cumulative Wh, 15-min, ≥97 rows)
+CSV_PATH      = r"C:\path\to\measurements.csv"   # CSV: timestamp,solar (cumulative Wh, 15-min, ≥97 rows ending ≥2 days in the past — the fit weather lags ~2 days)
 
 PLANT_NAME    = "My Plant (edit me)"
 LATITUDE      = 52.0
@@ -51,9 +51,14 @@ ASSET_NAME       = "Solar asset (edit me)"
 INVERTER_AC_KW   = 100.0
 EFFICIENCY       = 0.90
 TEMP_COEFF       = -0.0029   # power loss per °C above 25 °C cell temp [1/°C]; typical c-Si ≈ -0.0029
-DC_KWP           = None    # None -> computed from SUB_ARRAYS, or pin to a number
+DC_KWP           = None    # None -> computed from SUB_ARRAYS, or your datasheet total
 SUB_ARRAYS       = [
-    # Each parameter can be:  None -> autofit determines it, or a value -> pinned.
+    # Three states per angle (tilt shown; azimuth works identically):
+    #   None                        -> fitted from scratch
+    #   a value                     -> starting estimate, refined by the fit
+    #   a value + "fix_tilt": True  -> locked, excluded from the fit
+    # kwp is never pinned: a value sets the ratio between sub-arrays while
+    # the calibration determines the total from your measurements.
     # Use multiple sub-arrays if your plant has multiple roof faces with
     # different orientations.
     # Azimuth is a compass bearing: 0=north, 90=east, 180=south, 270=west
@@ -236,11 +241,13 @@ print(f"  -> Fitted DC capacity: {fitted_params['fitted_kwp']:.2f} kWp")
 if "temperature_coefficient" in fitted_params:
     print(f"  -> Fitted temperature response: {100 * fitted_params['temperature_coefficient']:.2f} %/degC "
           f"(freely fitted; absorbs cell-temperature and other power-dependent losses)")
+# Each angle carries its provenance: 'fixed' when locked via fix_tilt /
+# fix_azimuth at registration, 'fitted' when the calibration determined it.
 for sa in fitted_params["sub_arrays"]:
     print(f"     {sa['name']}: "
           f"kwp = {sa['kwp']:.2f} kWp, "
-          f"tilt = {sa['tilt_deg']:.1f}°, "
-          f"azimuth = {sa['azimuth_deg']:.1f}°")
+          f"tilt = {sa['tilt_deg']:.1f}° ({sa.get('tilt_source', 'fitted')}), "
+          f"azimuth = {sa['azimuth_deg']:.1f}° ({sa.get('azimuth_source', 'fitted')})")
 
 
 # --- Step 6: submit recent measurements and retrieve the forecast ----------

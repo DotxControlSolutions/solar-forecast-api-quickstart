@@ -62,7 +62,12 @@ secret, so it sits with `PLANT_NAME`, `ASSET_NAME`, etc.
 Point `CSV_PATH` (in the CONFIGURATION block, see below) at a CSV of
 historical cumulative-energy readings from your plant. Use this exact
 header and at least 97 data rows (one full day at 15-minute resolution;
-ideally one full year for accuracy):
+ideally one full year for accuracy). The window must end **at least ~2
+days in the past**: the weather data the calibration runs on becomes
+available with a ~2-day delay, so newer readings are trimmed from the
+fit — a CSV containing only the last day or two fails with an
+"insufficient data" error even if it has 97+ rows. (Forecasts are not
+affected by this delay.)
 
 ```
 timestamp,solar
@@ -135,7 +140,7 @@ ASSET_NAME       = "Solar asset (edit me)"
 INVERTER_AC_KW   = 200.0
 EFFICIENCY       = 0.9
 TEMP_COEFF       = -0.0029   # power loss per °C above 25 °C cell temp [1/°C]
-DC_KWP           = None    # None -> computed from SUB_ARRAYS, or pin to a number
+DC_KWP           = None    # None -> computed from SUB_ARRAYS, or your datasheet total
 SUB_ARRAYS       = [
     {"name": "main", "kwp": None, "tilt": None, "azimuth": None},
 ]
@@ -145,17 +150,36 @@ SUB_ARRAYS       = [
   Use a raw string (`r"..."`) on Windows so backslashes survive.
 - `LATITUDE` / `LONGITUDE` must match the physical location of your plant.
 - `EXTERNAL_REF` is a stable id from your own systems (e.g. CRM customer id).
-- `SUB_ARRAYS` - set `kwp` / `tilt` / `azimuth` to `null` to let the autofit
-  determine them, or to a pinned value if you already know them. Use one
-  sub-array per roof face if your plant has multiple orientations.
+- `SUB_ARRAYS` - use one sub-array per roof face if your plant has multiple
+  orientations. Each angle (`tilt`, `azimuth`) has **three states**:
+  - omitted or `null` - determined entirely from your measurements;
+  - a value - a **starting estimate** for the fit; the calibration refines
+    it from your measurements;
+  - a value plus `"fix_tilt": true` / `"fix_azimuth": true` - **locked**:
+    the angle is excluded from the fit and kept exactly as registered.
+    A `fix_*` flag without the corresponding value is rejected.
+
+  Example for a roof you have physically measured:
+
+  ```python
+  {"name": "main", "kwp": None, "tilt": 12.0, "azimuth": 186.0,
+   "fix_tilt": True, "fix_azimuth": True}
+  ```
+
+  `kwp` works differently: it is **never pinned**. A supplied `kwp` sets
+  the capacity ratio between sub-arrays, while the calibration determines
+  the total from the energy in your measurements. The fit result reports
+  per angle whether it was `fixed` or `fitted` (`tilt_source` /
+  `azimuth_source`), so you can verify a lock was honoured.
 - **Azimuth convention**: a compass bearing in degrees - **0° = north,
   90° = east, 180° = south, 270° = west**. A south-west roof face is
   ~220°, not -40° or +40°. Values are **not** converted from other
-  conventions (e.g. 0° = south): the fit supports 45°-315° and silently
-  clamps anything outside that range, so a wrong-convention value like
-  -90 becomes 45° (northeast) and degrades the fit. Tilt is degrees from
-  horizontal (0° = flat, 90° = vertical facade). When unsure, prefer
-  `null` over a guess in the wrong convention.
+  conventions (e.g. 0° = south): the fit searches the full circle
+  (0°-360°), so a wrong-convention value like -90 for a west roof is
+  clamped to 0° (north) and degrades the fit instead of failing loudly.
+  Tilt is degrees from horizontal (0° = flat, 90° = vertical facade).
+  When unsure, prefer `null` over a guess in the wrong convention - and
+  never combine a `fix_*` lock with an unverified convention.
 - `INVERTER_AC_KW` is the AC capacity of your inverter; forecasts are
   clipped at this value.
 - `TEMP_COEFF` is the panel power temperature coefficient in 1/°C - the
@@ -180,7 +204,9 @@ You'll see five steps print to your terminal:
    CSV carries a `reduction` column, the response reports how many curtailed
    intervals were detected (`rows_reduced`).
 4. **Poll until calibration completes.** Once `is_calibrated` flips to
-   `true`, R² and RMSE are printed.
+   `true`, R² and RMSE are printed, plus the fitted parameters per
+   sub-array - each angle tagged with its provenance (`fixed` when you
+   locked it with `fix_*`, `fitted` otherwise).
 5. **Submit recent measurements and get a forecast.** The `/forecast/`
    endpoint takes the **same** cumulative-Wh format as `/fit/` (`time` +
    `solar`, the lifetime-yield counter in Wh) — one unit across the whole
