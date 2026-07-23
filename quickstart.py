@@ -54,16 +54,17 @@ TEMP_COEFF       = -0.0029   # power loss per °C above 25 °C cell temp [1/°C]
 DC_KWP           = None    # None -> computed from SUB_ARRAYS, or your datasheet total
 SUB_ARRAYS       = [
     # Three states per angle (tilt shown; azimuth works identically):
-    #   None                        -> fitted from scratch
-    #   a value                     -> starting estimate, refined by the fit
-    #   a value + "fix_tilt": True  -> locked, excluded from the fit
+    #   None                          -> fitted from scratch
+    #   a value                       -> starting estimate, refined by the fit
+    #   a value + "fix_tilt": True    -> locked, excluded from the fit
+    # (a fix_* flag set to True without its value is rejected)
     # kwp is never pinned: a value sets the ratio between sub-arrays while
     # the calibration determines the total from your measurements.
     # Use multiple sub-arrays if your plant has multiple roof faces with
     # different orientations.
     # Azimuth is a compass bearing: 0=north, 90=east, 180=south, 270=west
     # (NOT 0=south; values are never converted). Tilt is degrees from horizontal.
-    {"name": "main", "kwp": None, "tilt": None, "azimuth": None},
+    {"name": "main", "kwp": None, "tilt": None, "fix_tilt": False, "azimuth": None, "fix_azimuth": False},
 ]
 
 # ---------------------------------------------------------------------------
