@@ -242,11 +242,12 @@ print(f"  -> Fitted DC capacity: {fitted_params['fitted_kwp']:.2f} kWp")
 if "temperature_coefficient" in fitted_params:
     print(f"  -> Fitted temperature response: {100 * fitted_params['temperature_coefficient']:.2f} %/degC "
           f"(freely fitted; absorbs cell-temperature and other power-dependent losses)")
-# Each angle carries its provenance: 'fixed' when locked via fix_tilt /
-# fix_azimuth at registration, 'fitted' when the calibration determined it.
+# Each field carries its provenance: 'fixed' when locked via fix_kwp /
+# fix_tilt / fix_azimuth at registration, 'fitted' when the calibration
+# determined it.
 for sa in fitted_params["sub_arrays"]:
     print(f"     {sa['name']}: "
-          f"kwp = {sa['kwp']:.2f} kWp, "
+          f"kwp = {sa['kwp']:.2f} kWp ({sa.get('kwp_source', 'fitted')}), "
           f"tilt = {sa['tilt_deg']:.1f}° ({sa.get('tilt_source', 'fitted')}), "
           f"azimuth = {sa['azimuth_deg']:.1f}° ({sa.get('azimuth_source', 'fitted')})")
 

@@ -151,33 +151,38 @@ SUB_ARRAYS       = [
 - `LATITUDE` / `LONGITUDE` must match the physical location of your plant.
 - `EXTERNAL_REF` is a stable id from your own systems (e.g. CRM customer id).
 - `SUB_ARRAYS` - use one sub-array per roof face if your plant has multiple
-  orientations. Each angle (`tilt`, `azimuth`) has **three states**:
+  orientations. Each field (`kwp`, `tilt`, `azimuth`) has **three states**:
   - omitted or `null` - determined entirely from your measurements;
   - a value - a **starting estimate** for the fit; the calibration refines
     it from your measurements;
-  - a value plus `"fix_tilt": true` / `"fix_azimuth": true` - **locked**:
-    the angle is excluded from the fit and kept exactly as registered.
-    A `fix_*` flag without the corresponding value is rejected.
+  - a value plus `"fix_kwp": true` / `"fix_tilt": true` / `"fix_azimuth":
+    true` - **locked**: the field is excluded from the fit and kept exactly
+    as registered. A `fix_*` flag without the corresponding value is
+    rejected.
 
-  Example for a roof you have physically measured:
+  You decide per field what the calibration may touch; nothing else pins a
+  value. Lock what you know - a nameplate off the datasheet, an angle read
+  off the roof or a satellite image - and leave the rest open.
+
+  Example for a roof you have physically measured, with a known nameplate:
 
   ```python
-  {"name": "main", "kwp": None, "tilt": 12.0, "azimuth": 186.0,
-   "fix_tilt": True, "fix_azimuth": True}
+  {"name": "main", "kwp": 57.0, "tilt": 12.0, "azimuth": 186.0,
+   "fix_kwp": True, "fix_tilt": True, "fix_azimuth": True}
   ```
 
-  `kwp` works differently: it is **never pinned**. A supplied `kwp` sets
-  the capacity ratio between sub-arrays, while the calibration determines
-  the total from the energy in your measurements. The fit result reports
-  per angle whether it was `fixed` or `fitted` (`tilt_source` /
-  `azimuth_source`), so you can verify a lock was honoured.
+  An **open** `kwp` is fitted, but not per sub-array on its own: the entered
+  values set the capacity ratio between sub-arrays, while the calibration
+  determines the total from the energy in your measurements. The fit result
+  reports per field whether it was `fixed` or `fitted` (`kwp_source`,
+  `tilt_source`, `azimuth_source`), so you can verify a lock was honoured.
 - **Azimuth convention**: a compass bearing in degrees - **0° = north,
   90° = east, 180° = south, 270° = west**. A south-west roof face is
   ~220°, not -40° or +40°. Values are **not** converted from other
-  conventions (e.g. 0° = south): the fit searches the full circle
-  (0°-360°), so a wrong-convention value like -90 for a west roof is
-  clamped to 0° (north) and degrades the fit instead of failing loudly.
-  Tilt is degrees from horizontal (0° = flat, 90° = vertical facade).
+  conventions (e.g. 0° = south), and must lie between 0° and 360°: a
+  wrong-convention value like -90 for a west roof is rejected at
+  registration rather than silently degrading the fit. Tilt is degrees
+  from horizontal and must lie between 0° and 60° (0° = flat).
   When unsure, prefer `null` over a guess in the wrong convention - and
   never combine a `fix_*` lock with an unverified convention.
 - `INVERTER_AC_KW` is the AC capacity of your inverter; forecasts are
