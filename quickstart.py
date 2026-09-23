@@ -51,20 +51,22 @@ ASSET_NAME       = "Solar asset (edit me)"
 INVERTER_AC_KW   = 100.0
 EFFICIENCY       = 0.90
 TEMP_COEFF       = -0.0029   # power loss per °C above 25 °C cell temp [1/°C]; typical c-Si ≈ -0.0029
-DC_KWP           = None    # None -> computed from SUB_ARRAYS, or your datasheet total
+FIX_TEMP_COEFF   = True      # False -> the calibration may adjust TEMP_COEFF
+DC_KWP           = None      # None -> computed from SUB_ARRAYS, or your datasheet total
 SUB_ARRAYS       = [
-    # Three states per angle (tilt shown; azimuth works identically):
-    #   None                          -> fitted from scratch
-    #   a value                       -> starting estimate, refined by the fit
-    #   a value + "fix_tilt": True    -> locked, excluded from the fit
-    # (a fix_* flag set to True without its value is rejected)
-    # kwp is never pinned: a value sets the ratio between sub-arrays while
-    # the calibration determines the total from your measurements.
+    # Every field needs a value. Each value is kept exactly as registered,
+    # unless you free it with "fix_<field>": False - the calibration then
+    # adjusts it from your measurements, starting from your value.
+    # Empty values (None) are rejected.
+    # A freed kwp keeps the ratio between sub-arrays; the calibration
+    # determines the total from your measurements.
     # Use multiple sub-arrays if your plant has multiple roof faces with
     # different orientations.
     # Azimuth is a compass bearing: 0=north, 90=east, 180=south, 270=west
     # (NOT 0=south; values are never converted). Tilt is degrees from horizontal.
-    {"name": "main", "kwp": None, "tilt": None, "fix_tilt": False, "azimuth": None, "fix_azimuth": False},
+    # The values below are placeholders, so everything is freed.
+    {"name": "main", "kwp": 100.0, "tilt": 15.0, "azimuth": 180.0,
+     "fix_kwp": False, "fix_tilt": False, "fix_azimuth": False},
 ]
 
 # ---------------------------------------------------------------------------
@@ -170,6 +172,7 @@ asset_payload = {
     "inverter_ac_kw": INVERTER_AC_KW,
     "efficiency":     EFFICIENCY,
     "temp_coeff":     TEMP_COEFF,
+    "fix_temp_coeff": FIX_TEMP_COEFF,
     "sub_arrays":     SUB_ARRAYS,
 }
 if DC_KWP is not None:
@@ -238,13 +241,11 @@ fitted_params = result["fitted_params"]
 r2   = fitted_params["r2"]
 rmse = fitted_params["rmse"]
 print(f"  -> Goodness of fit:    R² = {r2:.3f}, RMSE = {rmse:.2f} kW")
-print(f"  -> Fitted DC capacity: {fitted_params['fitted_kwp']:.2f} kWp")
-if "temperature_coefficient" in fitted_params:
-    print(f"  -> Fitted temperature response: {100 * fitted_params['temperature_coefficient']:.2f} %/degC "
-          f"(freely fitted; absorbs cell-temperature and other power-dependent losses)")
-# Each field carries its provenance: 'fixed' when locked via fix_kwp /
-# fix_tilt / fix_azimuth at registration, 'fitted' when the calibration
-# determined it.
+print(f"  -> DC capacity:        {fitted_params['fitted_kwp']:.2f} kWp")
+print(f"  -> Temperature response: {100 * fitted_params['temperature_coefficient']:.2f} %/degC "
+      f"({fitted_params.get('temperature_coefficient_source', 'fitted')})")
+# Each field carries its provenance: 'fixed' when kept as registered,
+# 'fitted' when the calibration determined it (fix_<field> = False).
 for sa in fitted_params["sub_arrays"]:
     print(f"     {sa['name']}: "
           f"kwp = {sa['kwp']:.2f} kWp ({sa.get('kwp_source', 'fitted')}), "

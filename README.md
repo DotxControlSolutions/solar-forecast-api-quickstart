@@ -140,9 +140,11 @@ ASSET_NAME       = "Solar asset (edit me)"
 INVERTER_AC_KW   = 200.0
 EFFICIENCY       = 0.9
 TEMP_COEFF       = -0.0029   # power loss per °C above 25 °C cell temp [1/°C]
-DC_KWP           = None    # None -> computed from SUB_ARRAYS, or your datasheet total
+FIX_TEMP_COEFF   = True      # False -> the calibration may adjust TEMP_COEFF
+DC_KWP           = None      # None -> computed from SUB_ARRAYS, or your datasheet total
 SUB_ARRAYS       = [
-    {"name": "main", "kwp": None, "tilt": None, "azimuth": None},
+    {"name": "main", "kwp": 100.0, "tilt": 15.0, "azimuth": 180.0,
+     "fix_kwp": False, "fix_tilt": False, "fix_azimuth": False},
 ]
 ```
 
@@ -151,31 +153,29 @@ SUB_ARRAYS       = [
 - `LATITUDE` / `LONGITUDE` must match the physical location of your plant.
 - `EXTERNAL_REF` is a stable id from your own systems (e.g. CRM customer id).
 - `SUB_ARRAYS` - use one sub-array per roof face if your plant has multiple
-  orientations. Each field (`kwp`, `tilt`, `azimuth`) has **three states**:
-  - omitted or `null` - determined entirely from your measurements;
-  - a value - a **starting estimate** for the fit; the calibration refines
-    it from your measurements;
-  - a value plus `"fix_kwp": true` / `"fix_tilt": true` / `"fix_azimuth":
-    true` - **locked**: the field is excluded from the fit and kept exactly
-    as registered. A `fix_*` flag without the corresponding value is
-    rejected.
+  orientations. Every sub-array needs a value for `kwp`, `tilt` and
+  `azimuth`. **Each value is kept exactly as registered**, unless you free
+  it: `"fix_kwp": false`, `"fix_tilt": false` or `"fix_azimuth": false`
+  lets the calibration adjust that field from your measurements, starting
+  from the value you entered. Empty values (`None`/`null`, or a missing
+  field) are rejected at registration.
 
-  You decide per field what the calibration may touch; nothing else pins a
-  value. Lock what you know - a nameplate off the datasheet, an angle read
-  off the roof or a satellite image - and leave the rest open.
+  Keep what you know (a nameplate off the datasheet, an angle read off the
+  roof or a satellite image) and free what you are unsure of. The example
+  configuration frees everything, because its values are placeholders.
 
-  Example for a roof you have physically measured, with a known nameplate:
+  A roof you have physically measured, with a known nameplate: keep
+  everything (the flags can be left out, `true` is the default):
 
   ```python
-  {"name": "main", "kwp": 57.0, "tilt": 12.0, "azimuth": 186.0,
-   "fix_kwp": True, "fix_tilt": True, "fix_azimuth": True}
+  {"name": "main", "kwp": 57.0, "tilt": 12.0, "azimuth": 186.0}
   ```
 
-  An **open** `kwp` is fitted, but not per sub-array on its own: the entered
-  values set the capacity ratio between sub-arrays, while the calibration
+  A freed `kwp` is not fitted per sub-array on its own: the entered values
+  set the capacity ratio between sub-arrays, while the calibration
   determines the total from the energy in your measurements. The fit result
   reports per field whether it was `fixed` or `fitted` (`kwp_source`,
-  `tilt_source`, `azimuth_source`), so you can verify a lock was honoured.
+  `tilt_source`, `azimuth_source`, `temperature_coefficient_source`).
 - **Azimuth convention**: a compass bearing in degrees - **0° = north,
   90° = east, 180° = south, 270° = west**. A south-west roof face is
   ~220°, not -40° or +40°. Values are **not** converted from other
@@ -183,14 +183,16 @@ SUB_ARRAYS       = [
   wrong-convention value like -90 for a west roof is rejected at
   registration rather than silently degrading the fit. Tilt is degrees
   from horizontal and must lie between 0° and 60° (0° = flat).
-  When unsure, prefer `null` over a guess in the wrong convention - and
-  never combine a `fix_*` lock with an unverified convention.
+  When unsure, enter your best estimate and free it with
+  `"fix_azimuth": false` - never keep an azimuth whose convention you have
+  not verified.
 - `INVERTER_AC_KW` is the AC capacity of your inverter; forecasts are
   clipped at this value.
 - `TEMP_COEFF` is the panel power temperature coefficient in 1/°C - the
   fractional power loss per °C of cell temperature above 25 °C. Typical
   crystalline-silicon panels are around -0.0029 to -0.004; check your panel
-  datasheet. The API defaults to -0.0029 if omitted.
+  datasheet. It is required, and kept as registered unless
+  `FIX_TEMP_COEFF = False`.
 
 The same configuration lives in the first code cell of the notebook.
 
@@ -209,9 +211,10 @@ You'll see five steps print to your terminal:
    CSV carries a `reduction` column, the response reports how many curtailed
    intervals were detected (`rows_reduced`).
 4. **Poll until calibration completes.** Once `is_calibrated` flips to
-   `true`, R² and RMSE are printed, plus the fitted parameters per
-   sub-array - each angle tagged with its provenance (`fixed` when you
-   locked it with `fix_*`, `fitted` otherwise).
+   `true`, R² and RMSE are printed, plus the parameters per
+   sub-array and the temperature coefficient - each tagged with its
+   provenance (`fixed` when kept as registered, `fitted` when the
+   calibration determined it).
 5. **Submit recent measurements and get a forecast.** The `/forecast/`
    endpoint takes the **same** cumulative-Wh format as `/fit/` (`time` +
    `solar`, the lifetime-yield counter in Wh) — one unit across the whole
