@@ -157,12 +157,13 @@ SUB_ARRAYS       = [
   `azimuth`. **Each value is kept exactly as registered**, unless you free
   it: `"fix_kwp": false`, `"fix_tilt": false` or `"fix_azimuth": false`
   lets the calibration adjust that field from your measurements, starting
-  from the value you entered. Empty values (`None`/`null`, or a missing
-  field) are rejected at registration.
+  from the value you entered. A freed value is refined, not searched from
+  scratch, so always enter a realistic value - never a placeholder. Empty
+  values (`None`/`null`, or a missing field) are rejected at registration.
 
   Keep what you know (a nameplate off the datasheet, an angle read off the
-  roof or a satellite image) and free what you are unsure of. The example
-  configuration frees everything, because its values are placeholders.
+  roof or a satellite image) and free what you are less sure of. Replace
+  the example values with your own plant's before running.
 
   A roof you have physically measured, with a known nameplate: keep
   everything (the flags can be left out, `true` is the default):
@@ -183,9 +184,8 @@ SUB_ARRAYS       = [
   wrong-convention value like -90 for a west roof is rejected at
   registration rather than silently degrading the fit. Tilt is degrees
   from horizontal and must lie between 0° and 60° (0° = flat).
-  When unsure, enter your best estimate and free it with
-  `"fix_azimuth": false` - never keep an azimuth whose convention you have
-  not verified.
+  Check the convention before registering: a freed azimuth is refined from
+  the value you enter, so a value in the wrong convention stays wrong.
 - `INVERTER_AC_KW` is the AC capacity of your inverter; forecasts are
   clipped at this value.
 - `TEMP_COEFF` is the panel power temperature coefficient in 1/°C - the

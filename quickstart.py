@@ -56,7 +56,8 @@ DC_KWP           = None      # None -> computed from SUB_ARRAYS, or your datashe
 SUB_ARRAYS       = [
     # Every field needs a value. Each value is kept exactly as registered,
     # unless you free it with "fix_<field>": False - the calibration then
-    # adjusts it from your measurements, starting from your value.
+    # adjusts it from your measurements, starting from your value. A freed
+    # value is refined, not searched from scratch: enter a realistic value.
     # Empty values (None) are rejected.
     # Freed kwp values keep their ratio to each other; together they account
     # for the measured energy that the kept sub-arrays do not explain.
@@ -64,7 +65,7 @@ SUB_ARRAYS       = [
     # different orientations.
     # Azimuth is a compass bearing: 0=north, 90=east, 180=south, 270=west
     # (NOT 0=south; values are never converted). Tilt is degrees from horizontal.
-    # The values below are placeholders, so everything is freed.
+    # Replace the example values below with your own plant's before running.
     {"name": "main", "kwp": 100.0, "tilt": 15.0, "azimuth": 180.0,
      "fix_kwp": False, "fix_tilt": False, "fix_azimuth": False},
 ]
