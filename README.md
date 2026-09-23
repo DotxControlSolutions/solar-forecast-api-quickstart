@@ -171,9 +171,9 @@ SUB_ARRAYS       = [
   {"name": "main", "kwp": 57.0, "tilt": 12.0, "azimuth": 186.0}
   ```
 
-  A freed `kwp` is not fitted per sub-array on its own: the entered values
-  set the capacity ratio between sub-arrays, while the calibration
-  determines the total from the energy in your measurements. The fit result
+  Freed `kwp` values keep their ratio to each other; together they account
+  for the energy in your measurements that the kept sub-arrays do not
+  explain. The fit result
   reports per field whether it was `fixed` or `fitted` (`kwp_source`,
   `tilt_source`, `azimuth_source`, `temperature_coefficient_source`).
 - **Azimuth convention**: a compass bearing in degrees - **0° = north,
@@ -191,7 +191,9 @@ SUB_ARRAYS       = [
 - `TEMP_COEFF` is the panel power temperature coefficient in 1/°C - the
   fractional power loss per °C of cell temperature above 25 °C. Typical
   crystalline-silicon panels are around -0.0029 to -0.004; check your panel
-  datasheet. It is required, and kept as registered unless
+  datasheet, and divide a figure in %/°C by 100 (-0.29 %/°C is -0.0029).
+  Values must lie between -0.02 and 0. It is required, and kept as
+  registered unless
   `FIX_TEMP_COEFF = False`.
 
 The same configuration lives in the first code cell of the notebook.

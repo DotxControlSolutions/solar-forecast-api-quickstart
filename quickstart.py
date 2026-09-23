@@ -58,8 +58,8 @@ SUB_ARRAYS       = [
     # unless you free it with "fix_<field>": False - the calibration then
     # adjusts it from your measurements, starting from your value.
     # Empty values (None) are rejected.
-    # A freed kwp keeps the ratio between sub-arrays; the calibration
-    # determines the total from your measurements.
+    # Freed kwp values keep their ratio to each other; together they account
+    # for the measured energy that the kept sub-arrays do not explain.
     # Use multiple sub-arrays if your plant has multiple roof faces with
     # different orientations.
     # Azimuth is a compass bearing: 0=north, 90=east, 180=south, 270=west
